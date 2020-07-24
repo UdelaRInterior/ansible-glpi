@@ -14,6 +14,44 @@
     validate_certs: false
   when: not glpiinstalled.stat.exists or glpi_update
 
+- name: Perform basic installation (this take a while...)
+  command:
+    chdir: "{{ glpi_install_path }}/glpi"
+    cmd: "php bin/console -n db:install -H {{ glpi_db_host }} -P {{ glpi_db_port }} -d {{ glpi_db_name }} -u {{ glpi_db_user }} -p {{ glpi_db_password }}"
+  when: ( not glpiinstalled.stat.exists or glpi_update ) and glpi_perform_install
+  register: glpi_installation
+
+- name: Set permisions to files directory
+  file:
+    path: "{{ glpi_install_path }}/glpi/files"
+    recurse: yes
+    owner: "{{ glpi_web_owner }}"
+    group: "{{ glpi_web_group }}"
+  when: not glpiinstalled.stat.exists or glpi_update
+
+- name: Set permisions to config directory
+  file:
+    path: "{{ glpi_install_path }}/glpi/config"
+    recurse: yes
+    owner: "{{ glpi_web_owner }}"
+    group: "{{ glpi_web_group }}"
+  when: not glpiinstalled.stat.exists or glpi_update
+
+- name: Secure installation directory
+  copy:
+    src: "glpi/install/.htaccess"
+    dest: "{{ glpi_install_path }}/glpi/install/.htaccess"
+    owner: "{{ glpi_web_owner }}"
+    group: "{{ glpi_web_group }}"
+    mode: 0440
+  when: glpi_installation.changed
+
+- name: Remove install/install.php file
+  file:
+    path: "{{ glpi_install_path }}/glpi/install/install.php"
+    state: absent
+  when: glpi_installation.changed
+
 - name: Download plugins
   get_url:
     url: "{{ item }}"
