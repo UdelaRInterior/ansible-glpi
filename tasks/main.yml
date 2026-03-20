@@ -76,6 +76,8 @@
 
 - name: Automatic update
   when: glpi_update
+  become: yes
+  become_user: "{{ glpi_web_owner }}"
   command: "php bin/console db:update --no-telemetry --no-interaction"
   args:
     chdir: "{{ glpi_install_path }}/glpi"
@@ -84,7 +86,9 @@
     - Add htaccess
 
 - name: Automatic installation
-  command: "php bin/console -n db:install -H {{ glpi_db_host }} -P {{ glpi_db_port }} -d {{ glpi_db_name }} -u {{ glpi_db_user }} -p {{ glpi_db_password }}"
+  become: yes
+  become_user: "{{ glpi_web_owner }}"
+  command: "php bin/console -n db:install -H {{ glpi_db_host }} -P {{ glpi_db_port }} -d {{ glpi_db_name }} -u {{ glpi_db_user }} -p {{ glpi_db_password }} --reconfigure"
   args:
     chdir: "{{ glpi_install_path }}/glpi"
   notify:
@@ -115,12 +119,16 @@
 
     - name: Install plugins
       command: "php bin/console glpi:plugin:install {{ item }} -u {{ glpi_api_user }} --force"
+      become: yes
+      become_user: "{{ glpi_web_owner }}"
       args:
         chdir: "{{ glpi_install_path }}/glpi"
       loop: "{{ glpi_plugins | community.general.json_query('[*].name') | list }}"
 
     - name: Activate plugins
       command: "php bin/console glpi:plugin:activate {{ item }}"
+      become: yes
+      become_user: "{{ glpi_web_owner }}"
       args:
         chdir: "{{ glpi_install_path }}/glpi"
       loop: "{{ glpi_plugins | community.general.json_query('[*].name') | list }}"
